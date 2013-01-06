@@ -126,6 +126,12 @@ function startTwitterSearch() {
         log('found user '+initData['originalTwitterAccount']+' (ID: ' + userId + ')');
 
 
+        // don't continue if there aren't any tweets
+        if (!data[0].status) {
+            exit('no tweets found for that user');
+        }
+
+
         // if a cached JSON file exists, process it
         // async method, so wait for it to finish
         // following this, parse the file contents
@@ -133,7 +139,7 @@ function startTwitterSearch() {
         fileHelper.read(tweetCacheFilePath, parseTweetsFromFile);
 
 
-        // get the latest twitter id
+        // get the latest tweet id
         earliestTwitterCacheId = latestTweetId = data[0].status.id_str;
 
 
@@ -189,32 +195,37 @@ function storeOldTweets(e, data) {
         exit("Twitter search error", e);
     }
 
-    log(data.length, "old tweets returned from twitter");
-
-    // loop through and store each tweet
-    // if a tweet is earlier than the archive date searchAgain will be false
-    // otherwise it will remain true
-    var searchAgain = data.every(storeOldTweet);
-
-    // check whether we've found them all?
-    if (data.length < tweetsPerRequest) {
-        log("Found all old tweets");
-        searchAgain = false;
-    }
-
-    // check whether we've reached our request limit?
-    if (requestCounter++ > requestLimit) {
-        log("Request limit reached");
-        searchAgain = false;
-    }
-
-    // should we continue to search for more tweets?
-    if (!searchAgain) {
-        fileHelper.save(tweetCacheFilePath, tweets);
-        scheduleNextTweet();
-        log("Got all old tweets");
+    if (data.length < 1) {
+        log("no old tweets returned from twitter");
     } else {
-        getOldTweets();
+
+        log(data.length, "old tweets returned from twitter");
+
+        // loop through and store each tweet
+        // if a tweet is earlier than the archive date searchAgain will be false
+        // otherwise it will remain true
+        var searchAgain = data.every(storeOldTweet);
+
+        // check whether we've found them all?
+        if (data.length < tweetsPerRequest) {
+            log("Found all old tweets");
+            searchAgain = false;
+        }
+
+        // check whether we've reached our request limit?
+        if (requestCounter++ > requestLimit) {
+            log("Request limit reached");
+            searchAgain = false;
+        }
+
+        // should we continue to search for more tweets?
+        if (!searchAgain) {
+            fileHelper.save(tweetCacheFilePath, tweets);
+            scheduleNextTweet();
+            log("Got all old tweets");
+        } else {
+            getOldTweets();
+        }
     }
 }
 
