@@ -220,8 +220,9 @@ function storeOldTweets(e, data) {
 
         // should we continue to search for more tweets?
         if (!searchAgain) {
-            fileHelper.save(tweetCacheFilePath, tweets);
-            scheduleNextTweet();
+            fileHelper.save(tweetCacheFilePath, tweets, function(){
+                scheduleNextTweet();
+            });
             log("Got all old tweets");
         } else {
             getOldTweets();
@@ -288,11 +289,17 @@ function scheduleNextTweet() {
 
     nextTweetDate = moment(nextTweet.date).add(initData.archiveTimeUnit, initData.archiveTime);
 
-    nextScheduledTweet = schedule.scheduleJob(nextTweetDate.toDate(), function(){
-        postTweet(nextTweet);
-    });
-
-    log("next tweet", nextTweet.id, "scheduled for ", nextTweetDate);
+    // check if the next tweet is in the past?
+    diff = nextTweetDate.diff(moment());
+    if (diff < 0) {
+        log("tweet", nextTweet.id, "is in the past, skipping");
+        prepareNextTweet();
+    } else {
+        log("next tweet", nextTweet.id, "scheduled for ", nextTweetDate);
+        nextScheduledTweet = schedule.scheduleJob(nextTweetDate.toDate(), function(){
+            postTweet(nextTweet);
+        });
+    }
 }
 
 
@@ -306,7 +313,7 @@ function postTweet(tweet) {
     // ignore retweets
     if (str.indexOf("RT") === 0) {
         log('retweet detected, ignoring...');
-        prepareNextTweet(tweet);
+        prepareNextTweet();
 
     // OK to go!
     } else {
@@ -321,11 +328,11 @@ function postTweet(tweet) {
 
             if (!!e) {
                 log("Error posting tweet", e);
-                prepareNextTweet(tweet);
+                prepareNextTweet();
             } else {
                 //console.log(e, util.inspect(data));
                 log('tweet posted: ' + data.text + ' (ID: '+data.id_str+')');
-                prepareNextTweet(tweet);
+                prepareNextTweet();
             }
         });
     }
@@ -336,21 +343,18 @@ function postTweet(tweet) {
  * Once a tweet has been posted (or ignored if it is a RT)
  * Prepare for the next one
  */
-function prepareNextTweet(tweet) {
+function prepareNextTweet() {
 
     // remove tweet from array, resave tweet.json having removed tweet
     tweets.pop();
 
     // empty file if no tweets left
     if (tweets.length > 0) {
-        fileHelper.save(tweetCacheFilePath, tweets);
+        fileHelper.save(tweetCacheFilePath, tweets, scheduleNextTweet);
 
     } else {
-        fileHelper.empty(tweetCacheFilePath);
+        fileHelper.empty(tweetCacheFilePath, scheduleNextTweet);
     }
-
-    // carry on
-    scheduleNextTweet();
 }
 
 
@@ -396,12 +400,13 @@ function storeNewTweets(e, data) {
     // should we continue to search for more tweets?
     if (!searchAgain) {
         if (data.length > 0) {
-            fileHelper.save(tweetCacheFilePath, tweets);
-            if (!nextScheduledTweet) {
-                scheduleNextTweet();
-            }
-            log("Got all new tweets");
+            fileHelper.save(tweetCacheFilePath, tweets, function(){
+                if (!nextScheduledTweet) {
+                    scheduleNextTweet();
+                }
+            });
         }
+        log("Got all new tweets");
     } else {
         getNewTweets();
     }
