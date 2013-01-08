@@ -39,9 +39,9 @@ var
     archiveDate,
 
     // twitter request limits
-    tweetsPerRequest = 5,
+    tweetsPerRequest = 200,
     requestCounter = 0, // don't change
-    requestLimit = 5,
+    requestLimit = 100,
     intervalCheck = [1, 6, 11, 16, 21, 26, 31, 36, 41, 46, 51, 56],
 
     // tweet ids
@@ -207,10 +207,10 @@ function storeOldTweets(e, data) {
         var searchAgain = data.every(storeOldTweet);
 
         // check whether we've found them all?
-        if (data.length < tweetsPerRequest) {
-            log("Found all old tweets");
-            searchAgain = false;
-        }
+        //if (data.length < (tweetsPerRequest - 1)) {
+        //    log("Found all old tweets");
+        //    searchAgain = false;
+        //}
 
         // check whether we've reached our request limit?
         if (requestCounter++ > requestLimit) {
