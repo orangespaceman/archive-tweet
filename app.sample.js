@@ -1,7 +1,7 @@
 /*
  * Start tweet archive
  */
-var tweetArchive = require("./tweet-archive");
+var tweetArchive = require("./lib/tweet-archive");
 
 tweetArchive.init({
   originalTwitterAccount  : "stephenfry",
